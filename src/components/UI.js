@@ -20,6 +20,13 @@ export default function UI() {
     hideKissAnimation
   } = useGameStore();
   
+  // Log when achievement changes
+  useEffect(() => {
+    if (currentAchievement) {
+      console.log('Achievement received:', currentAchievement);
+    }
+  }, [currentAchievement]);
+  
   // Decrease emotional state over time
   useEffect(() => {
     if (isDancing) return;
@@ -39,6 +46,18 @@ export default function UI() {
       return () => clearTimeout(timer);
     }
   }, [showKissAnimation, hideKissAnimation]);
+
+  // Get achievement style class based on name
+  const getAchievementClass = (title) => {
+    const lowerTitle = title.toLowerCase();
+    if (lowerTitle.includes('kiss')) return 'achievement-kiss';
+    if (lowerTitle.includes('dance')) return 'achievement-dance';
+    if (lowerTitle.includes('flirt')) return 'achievement-flirt';
+    if (lowerTitle.includes('love')) return 'achievement-love';
+    if (lowerTitle.includes('master')) return 'achievement-master';
+    if (lowerTitle.includes('pro')) return 'achievement-pro';
+    return 'achievement-default';
+  };
   
   return (
     <div className="game-ui">
@@ -88,12 +107,17 @@ export default function UI() {
           <div className="score-section">
             <div className="score-label">KISSES</div>
             <div className="score-value">{kissCount.toLocaleString()}</div>
-            {currentAchievement && (
-              <div className={`achievement-title ${currentAchievement.style}`}>
+          </div>
+          {currentAchievement && (
+            <div className="achievement-container">
+              <div 
+                className={`achievement-title ${getAchievementClass(currentAchievement.title)}`}
+                style={{ opacity: 1 }} // Ensure visibility
+              >
                 {currentAchievement.title}
               </div>
-            )}
-          </div>
+            </div>
+          )}
         </div>
       </div>
       

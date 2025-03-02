@@ -102,19 +102,19 @@ export default function usePlayerControls() {
         case '2':
           if (isDancing && isInside && energy > 10) {
             setDanceMove(DANCE_MOVES.SPIN);
-            increaseDanceScore(1);
+            increaseDanceScore(0.1);
           }
           break;
         case '3':
           if (isDancing && isInside && energy > 20) {
             setDanceMove(DANCE_MOVES.WAVE);
-            increaseDanceScore(2);
+            increaseDanceScore(0.3);
           }
           break;
         case '4':
           if (isDancing && isInside && energy > 30) {
             setDanceMove(DANCE_MOVES.JUMP);
-            increaseDanceScore(3);
+            increaseDanceScore(0.5);
           }
           break;
         default:

@@ -563,7 +563,7 @@ function Couch({ position, rotation }) {
     if (!isSitting) {
       setSitting(true);
       increaseEnergy();
-      setMessage('Energy restored! 🔋');
+      setMessage('Restoring energy... 🔋');
       setTimeout(() => setMessage(''), 2000);
     }
   };

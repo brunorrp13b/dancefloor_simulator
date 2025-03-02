@@ -47,9 +47,9 @@ const DANCE_MOVE_STATS = {
 
 const KISS_ACHIEVEMENTS = {
   NOVICE: { count: 1, title: "Kiss Novice", style: "text-xl font-bold text-pink-500" },
-  NOVICE: { count: 10, title: "Kiss Expert", style: "text-xl font-bold text-pink-500" },
-  INTERMEDIATE: { count: 50, title: "Love Whisperer", style: "text-2xl font-bold text-rose-600 animate-pulse" },
-  ADVANCED: { count: 100, title: "Romance Virtuoso", style: "text-3xl font-bold text-purple-600 animate-bounce" },
+  INTERMEDIATE: { count: 10, title: "Kiss Intermediate", style: "text-xl font-bold text-pink-500" },
+  ADVANCED: { count: 50, title: "Love Whisperer", style: "text-2xl font-bold text-rose-600 animate-pulse" },
+  EXPERT: { count: 100, title: "Romance Virtuoso", style: "text-3xl font-bold text-purple-600 animate-bounce" },
   MASTER: { count: 500, title: "Heartbreaker Legend", style: "text-4xl font-bold bg-gradient-to-r from-pink-500 to-purple-500 animate-pulse" },
   GRANDMASTER: { count: 1000, title: "Love God", style: "text-5xl font-bold bg-gradient-to-r from-red-500 via-pink-500 to-purple-500 animate-bounce shadow-lg" },
   DIVINE: { count: 10000, title: "Divine Seducer", style: "text-6xl font-extrabold bg-gradient-to-r from-pink-400 via-purple-500 to-indigo-600 animate-rainbow shadow-2xl" },
@@ -71,7 +71,7 @@ const useGameStore = create((set, get) => ({
   currentDanceMove: DANCE_MOVES.BASIC,
   danceScore: 0,
   emotionalState: 100,
-  confidence: 100,
+  confidence: 10,
   lastKissTime: 0,
   lastActivityTime: Date.now(),
   nearbyNPC: null,
@@ -94,6 +94,8 @@ const useGameStore = create((set, get) => ({
   showKissAnimation: false,
   kissPosition: [0, 0],
   currentAchievement: null,
+  npcCooldowns: {}, // Track cooldown timers for each NPC
+  energyRegenInterval: null,
   
   buyAlcohol: () => {
     const state = get();
@@ -152,7 +154,6 @@ const useGameStore = create((set, get) => ({
 
     return {
       energy: Math.max(state.energy - (state.isDancing ? moveStats.energyCost : 0), 0),
-      danceScore: state.isDancing ? state.danceScore + moveStats.scoreGain : state.danceScore,
       emotionalState: state.isDancing 
         ? Math.min(state.emotionalState + moveStats.emotionalGain, 100)
         : state.emotionalState
@@ -180,7 +181,7 @@ const useGameStore = create((set, get) => ({
       lastMoveChangeTime: now,
       confidence: Math.min(state.confidence + 5, 100), // Confidence boost for changing moves
       emotionalState: Math.min(state.emotionalState + 10, 100), // Emotional boost for changing moves
-      danceScore: timeSinceLastMove < 3 ? state.danceScore + 5 : state.danceScore // Bonus for quick moves change
+      danceScore: state.danceScore + moveStats.scoreGain + (timeSinceLastMove < 3 ? 5 : 0) // Base score for new move + quick change bonus
     }));
     return true;
   },
@@ -223,13 +224,42 @@ const useGameStore = create((set, get) => ({
     };
   }),
   
-  getFlirtSuccessChance: (state) => {
-    const baseChance = 0.2; // Reduced base chance
-    const danceBonus = state.isDancing ? 0.15 : 0;
-    const emotionalBonus = state.emotionalState * 0.004;
-    const confidenceBonus = state.confidence * 0.003;
-    const comboBonus = Math.min(state.flirtCombo * 0.05, 0.25); // Up to 25% from combo
-    return Math.min(0.9, baseChance + danceBonus + emotionalBonus + confidenceBonus + comboBonus);
+  getFlirtSuccessChance: (state, message = '') => {
+    // Base chance is lower to make early game more challenging
+    const baseChance = 0.05; // Base 5% chance
+    
+    // Dancing bonus - significant to encourage dancing
+    const danceBonus = state.isDancing ? 0.20 : 0;
+    
+    // Emotional state has moderate impact - recoverable resource
+    const emotionalBonus = state.emotionalState * 0.002; // Up to 20% at max emotional
+    
+    // Confidence is a key factor - main progression metric
+    const confidenceBonus = state.confidence * 0.0015; // Up to 15% at max confidence
+    
+    // Combo system is more rewarding but harder to maintain
+    const comboBonus = Math.min(state.flirtCombo * 0.02, 0.10); // 2% per combo, up to 10% max
+    
+    // Message bonus - reward players who write messages (optimized for 20 char max)
+    const messageBonus = message ? Math.min(0.15 + (message.length * 0.005), 0.25) : 0; // Up to 25% (15% base + 0.5% per char, max at 20 chars)
+    
+    // Quick flirt penalty - make it slightly harder than writing messages
+    const quickFlirtPenalty = !message ? 0.10 : 0; // -10% for quick flirts
+    
+    // Luck factor for excitement - can turn the tide
+    const luckFactor = Math.random() * 0.15; // Random luck up to 15%
+    
+    // Cap total chance at 70% for sustained challenge
+    return Math.min(0.70, 
+      baseChance + 
+      danceBonus + 
+      emotionalBonus + 
+      confidenceBonus + 
+      comboBonus + 
+      messageBonus - 
+      quickFlirtPenalty + 
+      luckFactor
+    );
   },
   
   setSitting: (status) => {
@@ -244,6 +274,20 @@ const useGameStore = create((set, get) => ({
         }
       };
       animate();
+
+      // Start energy regeneration
+      const interval = setInterval(() => {
+        set((state) => {
+          const newEnergy = Math.min(state.energy + 10, 100);
+          const wasRestored = newEnergy === 100 && state.energy < 100;
+          return {
+            energy: newEnergy,
+            showEnergyRestoredMessage: wasRestored
+          };
+        });
+      }, 1000);
+
+      set({ energyRegenInterval: interval });
     } else {
       let progress = 1;
       const animate = () => {
@@ -256,6 +300,13 @@ const useGameStore = create((set, get) => ({
         }
       };
       animate();
+
+      // Stop energy regeneration
+      const state = get();
+      if (state.energyRegenInterval) {
+        clearInterval(state.energyRegenInterval);
+        set({ energyRegenInterval: null });
+      }
     }
   },
   
@@ -287,54 +338,111 @@ const useGameStore = create((set, get) => ({
     set({ alcoholEffectTimer: timer });
   },
 
-  handleFlirt: (message) => {
+  processNPCInteraction: (message, npcType) => {
     const state = get();
-    let successRate = 0.3;
-    let feedback = '';
-
-    const hasCompliment = /beautiful|pretty|nice|cute|amazing|awesome/i.test(message);
-    const hasPushPull = /but|however|though|although/i.test(message);
-    const hasTease = /tease|playful|fun|joke/i.test(message);
-    const hasInsult = /ugly|stupid|dumb|bad|worst|hate/i.test(message);
-
-    if (hasInsult) {
-      set((state) => ({
-        confidence: Math.max(state.confidence - 20, 0),
-        emotionalState: Math.max(state.emotionalState - 15, 0),
-        rejectionCount: state.rejectionCount + 1,
-        flirtCombo: 0
-      }));
+    
+    // Check if player has enough energy and confidence to flirt
+    if (state.energy < 10) {
       return {
+        text: "You're too tired to flirt... Rest to regain energy! 😴",
         success: false,
-        response: "How dare you! You should learn some manners!",
-        feedback: "Insulting people is never a good approach. Try being respectful and genuine."
+        isCriticalFailure: false,
+        timeLeft: 0
       };
     }
 
-    if (hasCompliment || hasPushPull || hasTease) {
-      successRate = 0.5;
-      feedback = "Good use of ";
-      if (hasCompliment) feedback += "compliments! ";
-      if (hasPushPull) feedback += "push-pull technique! ";
-      if (hasTease) feedback += "playful teasing! ";
+    if (state.confidence < 10) {
+      return {
+        text: "You're not confident enough to flirt... Try dancing or looking in the mirror! 😳",
+        success: false,
+        isCriticalFailure: false,
+        timeLeft: 0
+      };
+    }
+    
+    // Check if this specific NPC is on cooldown from a critical failure
+    const npcCooldown = state.npcCooldowns[npcType];
+    if (npcCooldown) {
+      const timeLeft = Math.ceil((npcCooldown.endTime - Date.now()) / 1000);
+      if (timeLeft > 0) {
+        return {
+          text: `${npcCooldown.message} (${timeLeft}s)`,
+          success: false,
+          isCriticalFailure: true,
+          timeLeft: timeLeft,
+          npcType: npcType
+        };
+      } else {
+        // Clear expired cooldown but keep the history
+        set((state) => ({
+          npcCooldowns: {
+            ...state.npcCooldowns,
+            [npcType]: {
+              ...state.npcCooldowns[npcType],
+              endTime: null,
+              active: false
+            }
+          }
+        }));
+      }
     }
 
-    const isSuccess = Math.random() < get().getFlirtSuccessChance(state);
+    // Consume energy for flirting attempt (more energy for written messages)
+    const energyCost = message ? 15 : 10;
+    set((state) => ({
+      energy: Math.max(state.energy - energyCost, 0)
+    }));
 
-    if (!isSuccess) {
-      set((state) => {
-        const newRejectionCount = state.rejectionCount + 1;
-        const shouldReduceConfidence = newRejectionCount % 2 === 0;
+    const roll = Math.random();
+    const successChance = get().getFlirtSuccessChance(state);
+    
+    // Critical failure has 10% chance no matter what
+    const isCriticalFailure = roll < 0.10;
+    // Critical success (5% chance)
+    const isCritical = roll > 0.95;
+    // Regular success - only check if not critical failure
+    const isSuccess = !isCriticalFailure && (isCritical || roll < successChance);
+    
+    let response = {
+      text: '',
+      success: isSuccess,
+      isCritical: isCritical,
+      isCriticalFailure: isCriticalFailure,
+      timeLeft: isCriticalFailure ? 60 : 0,
+      npcType: npcType
+    };
+
+    // Generate response based on outcome
+    if (isCriticalFailure) {
+      const failureMessage = npcType === NPC_TYPES.PINK_LONG ?
+        "Ugh, that's it! Don't talk to me for a while! 🤬" :
+        "Just... leave me alone for now! 😤";
+      
+      response.text = failureMessage;
         
-        return {
-          rejectionCount: newRejectionCount,
-          confidence: shouldReduceConfidence 
-            ? Math.max(state.confidence * 0.75, 0)
-            : state.confidence,
-          flirtCombo: 0
-        };
-      });
-    } else {
+      // Set 60-second cooldown for this specific NPC
+      const cooldownTime = Date.now() + 60000; // 60 seconds from now
+      set((state) => ({
+        npcCooldowns: {
+          ...state.npcCooldowns,
+          [npcType]: {
+            endTime: cooldownTime,
+            message: failureMessage,
+            active: true,
+            failureCount: (state.npcCooldowns[npcType]?.failureCount || 0) + 1,
+            lastFailure: Date.now()
+          }
+        },
+        rejectionCount: state.rejectionCount + 1,
+        confidence: Math.max(state.confidence - 30, 0),
+        emotionalState: Math.max(state.emotionalState - 25, 0),
+        flirtCombo: 0
+      }));
+    } else if (isCritical) {
+      response.text = npcType === NPC_TYPES.PINK_LONG ?
+        "Oh my... You're absolutely perfect! 💖✨" :
+        "Wow! Where have you been all my life? 💫💕";
+        
       const newKissCount = state.kissCount + 1;
       
       // Check for new achievements
@@ -350,35 +458,47 @@ const useGameStore = create((set, get) => ({
         lastActivityTime: Date.now(),
         lastKissTime: Date.now(),
         flirtCombo: state.flirtCombo + 1,
-        confidence: Math.min(state.confidence + (state.flirtCombo > 0 ? 5 : 0), 100),
+        confidence: Math.min(state.confidence + 10, 100),
+        emotionalState: Math.min(state.emotionalState + 15, 100),
         kissCount: newKissCount,
         showKissAnimation: true,
-        currentAchievement: newAchievement
+        currentAchievement: newAchievement || state.currentAchievement
       }));
+    } else if (isSuccess) {
+      response.text = npcType === NPC_TYPES.PINK_LONG ?
+        "That was smooth! I like you! 💃" :
+        "Nice moves! You're interesting! 🕺";
+        
+      set((state) => ({
+        lastActivityTime: Date.now(),
+        lastKissTime: Date.now(),
+        flirtCombo: state.flirtCombo + 1,
+        confidence: Math.min(state.confidence + 5, 100),
+        emotionalState: Math.min(state.emotionalState + 10, 100),
+        kissCount: state.kissCount + 1,
+        showKissAnimation: true
+      }));
+    } else {
+      response.text = npcType === NPC_TYPES.PINK_LONG ?
+        "Sorry, not interested... 💅" :
+        "Yeah... No. 🙄";
+        
+      set((state) => ({
+        rejectionCount: state.rejectionCount + 1,
+        confidence: Math.max(state.confidence - 10, 0),
+        emotionalState: Math.max(state.emotionalState - 5, 0),
+        flirtCombo: 0
+      }));
+    }
 
-      // Reset kiss animation after 2 seconds
+    // Reset kiss animation after 2 seconds if it was shown
+    if (isSuccess || isCritical) {
       setTimeout(() => {
         set({ showKissAnimation: false });
       }, 2000);
-
-      // Reset achievement display after 5 seconds
-      if (newAchievement) {
-        setTimeout(() => {
-          set({ currentAchievement: null });
-        }, 5000);
-      }
     }
 
-    const comboText = get().flirtCombo > 1 ? ` Combo x${get().flirtCombo}! ` : '';
-    return {
-      success: isSuccess,
-      response: isSuccess ? 
-        `That was smooth! I like your style! ${comboText}😊` : 
-        "Sorry, not interested 😕",
-      feedback: isSuccess ? 
-        `${feedback}Keep it up!` : 
-        `${feedback}Try being more creative and genuine. Remember to use compliments, teasing, or push-pull techniques.`
-    };
+    return response;
   },
 
   updateAlcoholEffect: () => {
@@ -423,86 +543,12 @@ const useGameStore = create((set, get) => ({
 
   triggerKissAnimation: () => set((state) => ({
     showKissAnimation: true,
-    kissCount: state.kissCount + 1,
     lastKissTime: Date.now()
   })),
 
   hideKissAnimation: () => set({
     showKissAnimation: false
-  }),
-
-  processNPCInteraction: (message, npcType, messageCount) => {
-    const state = get();
-    const positiveWords = ['love', 'beautiful', 'sweet', 'cute', 'amazing', 'wonderful', 'lovely', 'nice', 'pretty', 'charming', 'dance'];
-    const negativeWords = ['hate', 'ugly', 'bad', 'stupid', 'boring', 'weird', 'creepy', 'annoying', 'gross', 'terrible'];
-    const questionWords = ['what', 'how', 'why', 'when', 'where', 'who', '?'];
-    
-    // Analyze message
-    const words = message.toLowerCase().split(' ');
-    let score = 0;
-    let isQuestion = false;
-    
-    words.forEach(word => {
-      if (positiveWords.includes(word)) score += 0.2;
-      if (negativeWords.includes(word)) score -= 0.3;
-      if (questionWords.includes(word)) isQuestion = true;
-    });
-
-    // Add bonuses
-    if (state.isDancing) score += 0.2;
-    score += state.emotionalState * 0.003;
-    score += state.confidence * 0.002;
-
-    // Determine if this should be a final response
-    const isFinal = messageCount >= 2 || Math.abs(score) > 0.5;
-
-    // Generate response based on score and message count
-    let response = {
-      text: '',
-      success: false,
-      isFinal: isFinal
-    };
-
-    if (score < -0.3) {
-      response.text = "That was really rude! I'm out of here! 😠";
-      response.isFinal = true;
-      get().handleRejection();
-    } else if (score > 0.5) {
-      response.text = npcType === NPC_TYPES.PINK_LONG ? 
-        "You're absolutely charming! Let's dance! 💃✨" :
-        "Now that's what I call chemistry! Let's hit the dance floor! 🕺✨";
-      response.success = true;
-      response.isFinal = true;
-    } else if (isQuestion && messageCount < 2) {
-      response.text = npcType === NPC_TYPES.PINK_LONG ?
-        "Interesting question! What made you ask that? 🤔" :
-        "Hmm, that's a good point. Tell me more! 🎵";
-      response.success = true;
-      response.isFinal = false;
-    } else if (score > 0) {
-      response.text = npcType === NPC_TYPES.PINK_LONG ?
-        "That's sweet! Keep talking... 💖" :
-        "You've got my attention! Go on... ⚡";
-      response.success = true;
-      response.isFinal = false;
-    } else {
-      response.text = "I'm not sure about that... Maybe try a different approach? 🤨";
-      response.isFinal = messageCount >= 2;
-    }
-
-    // Apply game effects
-    if (response.success) {
-      set((state) => ({
-        emotionalState: Math.min(state.emotionalState + 10, 100),
-        confidence: Math.min(state.confidence + 5, 100),
-        flirtCombo: state.flirtCombo + 1
-      }));
-    } else if (response.isFinal) {
-      get().handleRejection();
-    }
-
-    return response;
-  }
+  })
 }));
 
 // Helper function to calculate distance from point to line segment

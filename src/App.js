@@ -78,9 +78,8 @@ function App() {
         <p>WASD - Move around</p>
         <p>Mouse - Look around</p>
         <p>Space - Dance</p>
-        <p>E - Get drinks at the bar</p>
         <p>1-4 - Dance moves</p>
-        <p>Keep an eye on your energy level!</p>
+        <p>Keep an eye on your energy and confidence level!</p>
       </div>
     </div>
   );
