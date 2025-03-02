@@ -162,9 +162,6 @@ function ChatBox({ onFlirt, message, onMessageSubmit }) {
                 Quick Flirt 💋
               </button>
             </form>
-            <p style={{ margin: '0', fontSize: '12px', opacity: 0.8 }}>
-              Press E for quick flirt
-            </p>
           </>
         )}
       </div>
@@ -227,18 +224,6 @@ function StickFigureNPC({ position, type, id }) {
       rightLegRef.current.rotation.x = Math.cos(time * 3) * 0.3;
     }
   });
-
-  // Add keyboard listener for 'E' key
-  useEffect(() => {
-    const handleKeyPress = (e) => {
-      if (e.key.toLowerCase() === 'e' && showChat && energy > 0) {
-        handleQuickFlirt();
-      }
-    };
-    
-    window.addEventListener('keydown', handleKeyPress);
-    return () => window.removeEventListener('keydown', handleKeyPress);
-  }, [showChat, energy]);
   
   const handleQuickFlirt = () => {
     if (Date.now() - lastFlirtTime < 1000) return; // Prevent spam

@@ -15,7 +15,9 @@ export default function UI() {
     confidence,
     decreaseEmotionalState,
     kissCount,
-    currentAchievement
+    currentAchievement,
+    showKissAnimation,
+    hideKissAnimation
   } = useGameStore();
   
   // Decrease emotional state over time
@@ -26,9 +28,24 @@ export default function UI() {
     
     return () => clearInterval(interval);
   }, [decreaseEmotionalState]);
+
+  // Hide kiss animation after delay
+  useEffect(() => {
+    if (showKissAnimation) {
+      const timer = setTimeout(() => {
+        hideKissAnimation();
+      }, 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [showKissAnimation, hideKissAnimation]);
   
   return (
     <div className="game-ui">
+      {showKissAnimation && (
+        <div className="kiss-animation">
+          <div className="kiss">💋</div>
+        </div>
+      )}
       <div className="status-bar">
         <div className="bars-container">
           <div className="energy-bar">
@@ -97,7 +114,7 @@ export default function UI() {
       )}
       
       <div className="controls-help">
-        <p>WASD - Move | Space - Dance | E - Interact</p>
+        <p>WASD - Move | Space - Dance</p>
         <p>Dance Moves: 1 - Basic | 2 - Spin | 3 - Wave | 4 - Jump</p>
         <p>Get close to other dancers to interact!</p>
         <p>Visit the mirror to build confidence!</p>

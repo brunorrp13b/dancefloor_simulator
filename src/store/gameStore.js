@@ -75,6 +75,7 @@ const useGameStore = create((set, get) => ({
   lastActivityTime: Date.now(),
   nearbyNPC: null,
   isFlirting: false,
+  isKeyboardLocked: false,
   showConfidenceMessage: false,
   isSitting: false,
   sittingAnimation: 0,
@@ -90,6 +91,7 @@ const useGameStore = create((set, get) => ({
   faceWashCooldown: false,
   kissCount: 0,
   showKissAnimation: false,
+  kissPosition: [0, 0],
   currentAchievement: null,
   
   buyAlcohol: () => {
@@ -186,7 +188,10 @@ const useGameStore = create((set, get) => ({
   increaseDanceScore: (points) => set((state) => ({ danceScore: state.danceScore + points })),
   
   setNearbyNPC: (npc) => set({ nearbyNPC: npc }),
-  setIsFlirting: (status) => set({ isFlirting: status }),
+  setIsFlirting: (status) => set((state) => ({ 
+    isFlirting: status,
+    isKeyboardLocked: status // Lock keyboard when flirting starts
+  })),
   
   increaseConfidence: () => set((state) => ({ 
     confidence: Math.min(state.confidence + 10, 100) // Reduced mirror boost
@@ -195,9 +200,13 @@ const useGameStore = create((set, get) => ({
     confidence: Math.max(state.confidence - 25, 0) 
   })),
   
-  increaseEmotionalState: () => set((state) => ({ 
-    emotionalState: Math.min(state.emotionalState + 20, 100) 
-  })),
+  increaseEmotionalState: () => set((state) => {
+    // Trigger kiss animation when emotional state increases
+    state.triggerKissAnimation();
+    return { 
+      emotionalState: Math.min(state.emotionalState + 20, 100) 
+    };
+  }),
   decreaseEmotionalState: () => set((state) => ({ 
     emotionalState: Math.max(state.emotionalState - 10, 0) 
   })),
@@ -403,6 +412,16 @@ const useGameStore = create((set, get) => ({
     }
     return false;
   },
+
+  triggerKissAnimation: () => set((state) => ({
+    showKissAnimation: true,
+    kissCount: state.kissCount + 1,
+    lastKissTime: Date.now()
+  })),
+
+  hideKissAnimation: () => set({
+    showKissAnimation: false
+  }),
 }));
 
 // Helper function to calculate distance from point to line segment

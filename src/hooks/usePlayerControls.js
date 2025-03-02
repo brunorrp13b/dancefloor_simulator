@@ -16,7 +16,8 @@ export default function usePlayerControls() {
     setDanceMove,
     increaseDanceScore,
     isInside,
-    setIsInside
+    setIsInside,
+    isKeyboardLocked
   } = useGameStore();
   
   // Check if player is inside the club
@@ -36,26 +37,52 @@ export default function usePlayerControls() {
 
   useEffect(() => {
     const handleKeyDown = (e) => {
+      // If keyboard is locked (during flirting), only allow Enter and Escape
+      if (isKeyboardLocked && e.key !== 'Enter' && e.key !== 'Escape') {
+        return;
+      }
+
       const speed = 0.5;
       const newPosition = [...playerPosition];
       let moved = false;
       
       switch (e.key.toLowerCase()) {
         case 'w':
-          newPosition[2] -= speed;
-          moved = true;
-          break;
         case 's':
-          newPosition[2] += speed;
-          moved = true;
-          break;
         case 'a':
-          newPosition[0] -= speed;
-          moved = true;
-          break;
         case 'd':
-          newPosition[0] += speed;
-          moved = true;
+          if (isDancing) {
+            setIsDancing(false);
+            return;
+          }
+          const newPosition = [...playerPosition];
+          let moved = false;
+          
+          switch (e.key.toLowerCase()) {
+            case 'w':
+              newPosition[2] -= speed;
+              moved = true;
+              break;
+            case 's':
+              newPosition[2] += speed;
+              moved = true;
+              break;
+            case 'a':
+              newPosition[0] -= speed;
+              moved = true;
+              break;
+            case 'd':
+              newPosition[0] += speed;
+              moved = true;
+              break;
+          }
+          
+          if (moved) {
+            // Boundary checks
+            newPosition[0] = Math.max(-12, Math.min(12, newPosition[0]));
+            newPosition[2] = Math.max(-12, Math.min(12, newPosition[2]));
+            setPlayerPosition(newPosition);
+          }
           break;
         case ' ':
           // Toggle dancing only if inside and has energy
@@ -64,28 +91,6 @@ export default function usePlayerControls() {
             if (!isDancing) {
               setDanceMove(DANCE_MOVES.BASIC);
             }
-          }
-          break;
-        case 'e':
-          if (!isInside) return;
-          
-          // Check if near the bar (position [-8, 1, -8])
-          const distanceToBar = Math.sqrt(
-            Math.pow(playerPosition[0] - -8, 2) +
-            Math.pow(playerPosition[2] - -8, 2)
-          );
-          if (distanceToBar < 2) {
-            setIsAtBar(true);
-            increaseEnergy();
-          }
-          
-          // Check if near the DJ booth (position [8, 1, -8])
-          const distanceToDJ = Math.sqrt(
-            Math.pow(playerPosition[0] - 8, 2) +
-            Math.pow(playerPosition[2] - -8, 2)
-          );
-          if (distanceToDJ < 2) {
-            setIsDJ(true);
           }
           break;
         // Dance moves only work if already dancing and inside

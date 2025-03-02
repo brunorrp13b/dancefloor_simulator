@@ -102,7 +102,7 @@ export default function Character({ position, isPlayer = false, characterType = 
       <mesh position={[0, 1.25, 0]}>
         <boxGeometry args={[0.4, 0.8, 0.2]} />
         <meshStandardMaterial 
-          color={characterType === 'player' ? '#ff61df' : 
+          color={characterType === 'player' ? '#000000' : 
                 characterType === 'pink_long' ? '#ff69b4' : '#4169e1'} 
         />
       </mesh>
@@ -111,17 +111,41 @@ export default function Character({ position, isPlayer = false, characterType = 
       <mesh position={[0, 1.75, 0]}>
         <sphereGeometry args={[0.15]} />
         <meshStandardMaterial 
-          color={characterType === 'player' ? '#ff61df' : 
+          color={characterType === 'player' ? '#000000' : 
                 characterType === 'pink_long' ? '#ff69b4' : '#4169e1'} 
         />
       </mesh>
+
+      {/* Hat */}
+      {characterType === 'player' && (
+        <group position={[0, 1.9, 0]}>
+          {/* Hat brim */}
+          <mesh position={[0, -0.02, 0]}>
+            <cylinderGeometry args={[0.2, 0.2, 0.02, 32]} />
+            <meshStandardMaterial color="#ffffff" />
+          </mesh>
+          {/* Hat top */}
+          <mesh position={[0, 0.06, 0]}>
+            <cylinderGeometry args={[0.15, 0.15, 0.1, 32]} />
+            <meshStandardMaterial color="#ffffff" />
+          </mesh>
+        </group>
+      )}
+
+      {/* Gold Chain */}
+      {characterType === 'player' && (
+        <mesh position={[0, 1.5, 0.11]}>
+          <torusGeometry args={[0.12, 0.02, 16, 32]} />
+          <meshStandardMaterial color="#FFD700" metalness={1} roughness={0.3} />
+        </mesh>
+      )}
 
       {/* Arms */}
       <group name="leftArm" position={[-0.3, 1.4, 0]}>
         <mesh>
           <boxGeometry args={[0.1, 0.4, 0.1]} />
           <meshStandardMaterial 
-            color={characterType === 'player' ? '#ff61df' : 
+            color={characterType === 'player' ? '#000000' : 
                   characterType === 'pink_long' ? '#ff69b4' : '#4169e1'} 
           />
         </mesh>
@@ -130,7 +154,7 @@ export default function Character({ position, isPlayer = false, characterType = 
         <mesh>
           <boxGeometry args={[0.1, 0.4, 0.1]} />
           <meshStandardMaterial 
-            color={characterType === 'player' ? '#ff61df' : 
+            color={characterType === 'player' ? '#000000' : 
                   characterType === 'pink_long' ? '#ff69b4' : '#4169e1'} 
           />
         </mesh>
@@ -141,7 +165,7 @@ export default function Character({ position, isPlayer = false, characterType = 
         <mesh>
           <boxGeometry args={[0.1, 0.6, 0.1]} />
           <meshStandardMaterial 
-            color={characterType === 'player' ? '#ff61df' : 
+            color={characterType === 'player' ? '#000000' : 
                   characterType === 'pink_long' ? '#ff69b4' : '#4169e1'} 
           />
         </mesh>
@@ -150,7 +174,7 @@ export default function Character({ position, isPlayer = false, characterType = 
         <mesh>
           <boxGeometry args={[0.1, 0.6, 0.1]} />
           <meshStandardMaterial 
-            color={characterType === 'player' ? '#ff61df' : 
+            color={characterType === 'player' ? '#000000' : 
                   characterType === 'pink_long' ? '#ff69b4' : '#4169e1'} 
           />
         </mesh>
