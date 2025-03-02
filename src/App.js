@@ -41,7 +41,6 @@ function Scene() {
       <NPCs />
       <Decorations />
       <DJBooth />
-      <Barman />
       
       {/* Post-processing effects */}
       <EffectComposer>

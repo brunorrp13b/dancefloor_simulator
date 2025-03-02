@@ -12,15 +12,27 @@ export default function SoundManager() {
   useEffect(() => {
     // Create audio element
     const audio = new Audio(MUSIC_URL);
-    audio.loop = true;
+    audio.loop = true; // Enable looping
     audioRef.current = audio;
 
     // Start playing when component mounts
-    audio.play().catch(error => {
-      console.log('Audio autoplay failed:', error);
+    const startPlaying = () => {
+      audio.play().catch(error => {
+        console.log('Audio autoplay failed:', error);
+      });
+    };
+
+    // Start playing initially
+    startPlaying();
+
+    // Add ended event listener as a backup in case loop property isn't supported
+    audio.addEventListener('ended', () => {
+      audio.currentTime = 0;
+      startPlaying();
     });
 
     return () => {
+      audio.removeEventListener('ended', startPlaying);
       audio.pause();
       audio.src = '';
     };
@@ -50,22 +62,17 @@ export default function SoundManager() {
       right: '20px',
       background: 'rgba(0, 0, 0, 0.8)',
       padding: '10px',
-      borderRadius: '8px',
-      color: 'white',
-      zIndex: 1000,
-      display: 'flex',
-      alignItems: 'center',
-      gap: '10px'
+      borderRadius: '5px',
+      zIndex: 1000
     }}>
       <button
         onClick={toggleMute}
         style={{
-          background: '#ff00ff',
+          background: 'none',
           border: 'none',
-          padding: '8px',
-          borderRadius: '4px',
+          color: 'white',
           cursor: 'pointer',
-          color: 'white'
+          fontSize: '24px'
         }}
       >
         {isMuted ? '🔇' : '🔊'}
@@ -78,6 +85,7 @@ export default function SoundManager() {
         value={musicVolume}
         onChange={adjustVolume}
         style={{
+          marginLeft: '10px',
           width: '100px'
         }}
       />

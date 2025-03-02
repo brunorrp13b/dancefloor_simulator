@@ -1,8 +1,9 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { SpotLight, Html } from '@react-three/drei';
 import useGameStore from '../store/gameStore';
 import Character from './Character';
+import Barman from './Barman';
 
 function DanceFloor() {
   const floorTilesRef = useRef([]);
@@ -84,6 +85,28 @@ function Door({ position, rotation }) {
   } = useGameStore();
   const [showPrompt, setShowPrompt] = useState(false);
   const doorRef = useRef();
+  const autoCloseTimerRef = useRef(null);
+
+  // Auto-close door after 3 seconds
+  useEffect(() => {
+    if (isDoorOpen) {
+      // Clear any existing timer
+      if (autoCloseTimerRef.current) {
+        clearTimeout(autoCloseTimerRef.current);
+      }
+      
+      // Set new timer to close door
+      autoCloseTimerRef.current = setTimeout(() => {
+        setDoorOpen(false);
+      }, 3000);
+    }
+
+    return () => {
+      if (autoCloseTimerRef.current) {
+        clearTimeout(autoCloseTimerRef.current);
+      }
+    };
+  }, [isDoorOpen, setDoorOpen]);
   
   useFrame(() => {
     if (doorRef.current) {
@@ -96,7 +119,7 @@ function Door({ position, rotation }) {
       const distanceToDoor = Math.sqrt(dx * dx + dz * dz);
       
       // Show prompt when within interaction distance (2 units) regardless of angle
-      setShowPrompt(distanceToDoor < 2 && isDoorOpen);
+      setShowPrompt(distanceToDoor < 2);
       
       // Animate door rotation
       const targetRotation = isDoorOpen ? Math.PI / 2 : 0;
@@ -737,6 +760,11 @@ export default function NightClub() {
         
         {/* Disco lights */}
         <DiscoLights />
+
+        {/* Barman on right wall facing dancefloor */}
+        <group position={[9.5, 0, 0]} rotation={[0, -Math.PI / 2, 0]}>
+          <Barman />
+        </group>
         
       </group>
     </>

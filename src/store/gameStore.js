@@ -58,10 +58,10 @@ const KISS_ACHIEVEMENTS = {
 };
 
 const useGameStore = create((set, get) => ({
-  playerPosition: [0, 1, 0],
-  playerRotation: [0, 0, 0],
+  playerPosition: [0, 1, 9],
+  playerRotation: [0, Math.PI, 0],
   playerVelocity: [0, 0, 0],
-  isInside: false,
+  isInside: true,
   musicVolume: 0.5,
   isDancing: false,
   isAtBar: false,
