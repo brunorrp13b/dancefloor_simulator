@@ -430,6 +430,79 @@ const useGameStore = create((set, get) => ({
   hideKissAnimation: () => set({
     showKissAnimation: false
   }),
+
+  processNPCInteraction: (message, npcType, messageCount) => {
+    const state = get();
+    const positiveWords = ['love', 'beautiful', 'sweet', 'cute', 'amazing', 'wonderful', 'lovely', 'nice', 'pretty', 'charming', 'dance'];
+    const negativeWords = ['hate', 'ugly', 'bad', 'stupid', 'boring', 'weird', 'creepy', 'annoying', 'gross', 'terrible'];
+    const questionWords = ['what', 'how', 'why', 'when', 'where', 'who', '?'];
+    
+    // Analyze message
+    const words = message.toLowerCase().split(' ');
+    let score = 0;
+    let isQuestion = false;
+    
+    words.forEach(word => {
+      if (positiveWords.includes(word)) score += 0.2;
+      if (negativeWords.includes(word)) score -= 0.3;
+      if (questionWords.includes(word)) isQuestion = true;
+    });
+
+    // Add bonuses
+    if (state.isDancing) score += 0.2;
+    score += state.emotionalState * 0.003;
+    score += state.confidence * 0.002;
+
+    // Determine if this should be a final response
+    const isFinal = messageCount >= 2 || Math.abs(score) > 0.5;
+
+    // Generate response based on score and message count
+    let response = {
+      text: '',
+      success: false,
+      isFinal: isFinal
+    };
+
+    if (score < -0.3) {
+      response.text = "That was really rude! I'm out of here! 😠";
+      response.isFinal = true;
+      get().handleRejection();
+    } else if (score > 0.5) {
+      response.text = npcType === NPC_TYPES.PINK_LONG ? 
+        "You're absolutely charming! Let's dance! 💃✨" :
+        "Now that's what I call chemistry! Let's hit the dance floor! 🕺✨";
+      response.success = true;
+      response.isFinal = true;
+    } else if (isQuestion && messageCount < 2) {
+      response.text = npcType === NPC_TYPES.PINK_LONG ?
+        "Interesting question! What made you ask that? 🤔" :
+        "Hmm, that's a good point. Tell me more! 🎵";
+      response.success = true;
+      response.isFinal = false;
+    } else if (score > 0) {
+      response.text = npcType === NPC_TYPES.PINK_LONG ?
+        "That's sweet! Keep talking... 💖" :
+        "You've got my attention! Go on... ⚡";
+      response.success = true;
+      response.isFinal = false;
+    } else {
+      response.text = "I'm not sure about that... Maybe try a different approach? 🤨";
+      response.isFinal = messageCount >= 2;
+    }
+
+    // Apply game effects
+    if (response.success) {
+      set((state) => ({
+        emotionalState: Math.min(state.emotionalState + 10, 100),
+        confidence: Math.min(state.confidence + 5, 100),
+        flirtCombo: state.flirtCombo + 1
+      }));
+    } else if (response.isFinal) {
+      get().handleRejection();
+    }
+
+    return response;
+  }
 }));
 
 // Helper function to calculate distance from point to line segment
