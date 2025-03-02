@@ -118,7 +118,7 @@ export default function Barman() {
     danceScore,
     energy,
     increaseEnergy,
-    setDanceScore,
+    increaseDanceScore,
     buyAlcohol,
     isAtBar,
     setIsAtBar,
@@ -148,7 +148,7 @@ export default function Barman() {
   const handleBuyEnergyDrink = () => {
     if (danceScore >= 20) {
       increaseEnergy();
-      setDanceScore(danceScore - 20);
+      increaseDanceScore(-20);
       setMessage('Enjoy your drink! Energy restored! 🔋✨');
     } else {
       setMessage('Not enough dance points! Keep dancing! 💃');

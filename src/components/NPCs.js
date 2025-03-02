@@ -86,14 +86,63 @@ function generateResponse(success, type) {
   return possibleResponses[Math.floor(Math.random() * possibleResponses.length)];
 }
 
-function ChatBox({ onFlirt, message, onMessageSubmit }) {
-  const [flirtMessage, setFlirtMessage] = useState('');
+function ChatBox({ npcType, onClose }) {
+  const [message, setMessage] = useState('');
+  const [response, setResponse] = useState('');
+  const [messageCount, setMessageCount] = useState(0);
+  const [isConversationEnded, setIsConversationEnded] = useState(false);
+  const processNPCInteraction = useGameStore(state => state.processNPCInteraction);
+  const increaseDanceScore = useGameStore(state => state.increaseDanceScore);
+  const increaseEmotionalState = useGameStore(state => state.increaseEmotionalState);
+  const increaseConfidence = useGameStore(state => state.increaseConfidence);
   
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (flirtMessage.trim()) {
-      onMessageSubmit(flirtMessage);
-      setFlirtMessage('');
+    if (!message.trim()) return;
+    
+    const result = processNPCInteraction(message, npcType, messageCount);
+    setResponse(result.text);
+    setMessageCount(prev => prev + 1);
+    setMessage('');
+    
+    // Apply game effects based on the response
+    if (result.success) {
+      increaseEmotionalState();
+      increaseConfidence();
+      if (result.text.toLowerCase().includes('dance')) {
+        increaseDanceScore(10);
+      }
+    }
+    
+    // Mark conversation as ended if final response or 3 messages
+    if (result.isFinal || messageCount >= 2) {
+      setIsConversationEnded(true);
+      setTimeout(() => {
+        onClose();
+      }, 2000);
+    }
+  };
+  
+  const handleQuickFlirt = () => {
+    const quickMessage = "Hey there! 😊";
+    const result = processNPCInteraction(quickMessage, npcType, messageCount);
+    setResponse(result.text);
+    setMessageCount(prev => prev + 1);
+    
+    // Apply game effects based on the response
+    if (result.success) {
+      increaseEmotionalState();
+      increaseConfidence();
+      if (result.text.toLowerCase().includes('dance')) {
+        increaseDanceScore(10);
+      }
+    }
+    
+    if (result.isFinal || messageCount >= 2) {
+      setIsConversationEnded(true);
+      setTimeout(() => {
+        onClose();
+      }, 2000);
     }
   };
   
@@ -107,20 +156,20 @@ function ChatBox({ onFlirt, message, onMessageSubmit }) {
         width: '200px',
         textAlign: 'center'
       }}>
-        {message ? (
+        {response ? (
           <p style={{ 
             margin: '0',
-            color: message.includes('rejected') || message.includes('needs') ? '#ff4444' : '#44ff44',
+            color: response.includes('rejected') || response.includes('needs') ? '#ff4444' : '#44ff44',
             fontSize: '14px',
             padding: '5px'
-          }}>{message}</p>
+          }}>{response}</p>
         ) : (
           <>
             <form onSubmit={handleSubmit} style={{ marginBottom: '10px' }}>
               <input
                 type="text"
-                value={flirtMessage}
-                onChange={(e) => setFlirtMessage(e.target.value)}
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
                 placeholder="Type your flirt message..."
                 maxLength={50}
                 style={{
@@ -149,7 +198,7 @@ function ChatBox({ onFlirt, message, onMessageSubmit }) {
               </button>
               <button
                 type="button"
-                onClick={onFlirt}
+                onClick={handleQuickFlirt}
                 style={{
                   background: '#ff69b4',
                   border: 'none',
@@ -282,9 +331,8 @@ function StickFigureNPC({ position, type, id }) {
     <group ref={npcRef} position={position}>
       {showChat && (
         <ChatBox
-          onFlirt={handleQuickFlirt}
-          message={flirtMessage}
-          onMessageSubmit={handleMessageFlirt}
+          npcType={type}
+          onClose={() => setShowChat(false)}
         />
       )}
       

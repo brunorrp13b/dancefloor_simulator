@@ -46,6 +46,7 @@ const DANCE_MOVE_STATS = {
 };
 
 const KISS_ACHIEVEMENTS = {
+  NOVICE: { count: 1, title: "Kiss Novice", style: "text-xl font-bold text-pink-500" },
   NOVICE: { count: 10, title: "Kiss Expert", style: "text-xl font-bold text-pink-500" },
   INTERMEDIATE: { count: 50, title: "Love Whisperer", style: "text-2xl font-bold text-rose-600 animate-pulse" },
   ADVANCED: { count: 100, title: "Romance Virtuoso", style: "text-3xl font-bold text-purple-600 animate-bounce" },
