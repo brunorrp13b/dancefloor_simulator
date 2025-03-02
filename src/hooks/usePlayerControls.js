@@ -78,9 +78,9 @@ export default function usePlayerControls() {
           }
           
           if (moved) {
-            // Boundary checks
-            newPosition[0] = Math.max(-12, Math.min(12, newPosition[0]));
-            newPosition[2] = Math.max(-12, Math.min(12, newPosition[2]));
+            // Boundary checks to match club walls exactly
+            newPosition[0] = Math.max(-9, Math.min(9, newPosition[0]));
+            newPosition[2] = Math.max(-9, Math.min(9, newPosition[2]));
             setPlayerPosition(newPosition);
           }
           break;
@@ -122,9 +122,9 @@ export default function usePlayerControls() {
       }
       
       if (moved) {
-        // Boundary checks
-        newPosition[0] = Math.max(-12, Math.min(12, newPosition[0]));
-        newPosition[2] = Math.max(-12, Math.min(12, newPosition[2]));
+        // Boundary checks to match club walls exactly
+        newPosition[0] = Math.max(-9, Math.min(9, newPosition[0]));
+        newPosition[2] = Math.max(-9, Math.min(9, newPosition[2]));
         setPlayerPosition(newPosition);
       }
     };

@@ -39,10 +39,10 @@ const WALLS = [
 
 // Add new constants for game balance
 const DANCE_MOVE_STATS = {
-  [DANCE_MOVES.BASIC]: { energyCost: 0.5, scoreGain: 1, emotionalGain: 5 },
-  [DANCE_MOVES.SPIN]: { energyCost: 0.75, scoreGain: 1.5, emotionalGain: 6, minConfidence: 30 },
-  [DANCE_MOVES.WAVE]: { energyCost: 1, scoreGain: 2, emotionalGain: 7, minConfidence: 50 },
-  [DANCE_MOVES.JUMP]: { energyCost: 1.5, scoreGain: 2.5, emotionalGain: 8, minConfidence: 70 }
+  [DANCE_MOVES.BASIC]: { energyCost: 0.5, scoreGain: 0.33, emotionalGain: 1.67 },
+  [DANCE_MOVES.SPIN]: { energyCost: 0.75, scoreGain: 0.5, emotionalGain: 2, minConfidence: 30 },
+  [DANCE_MOVES.WAVE]: { energyCost: 1, scoreGain: 0.67, emotionalGain: 2.33, minConfidence: 50 },
+  [DANCE_MOVES.JUMP]: { energyCost: 1.5, scoreGain: 0.83, emotionalGain: 2.67, minConfidence: 70 }
 };
 
 const KISS_ACHIEVEMENTS = {
@@ -154,9 +154,7 @@ const useGameStore = create((set, get) => ({
       danceScore: state.isDancing ? state.danceScore + moveStats.scoreGain : state.danceScore,
       emotionalState: state.isDancing 
         ? Math.min(state.emotionalState + moveStats.emotionalGain, 100)
-        : shouldDepleteEmotional 
-          ? Math.max(state.emotionalState - 2, 0)
-          : state.emotionalState
+        : state.emotionalState
     };
   }),
   increaseEnergy: () => set((state) => ({ 
@@ -211,9 +209,18 @@ const useGameStore = create((set, get) => ({
     emotionalState: Math.max(state.emotionalState - 10, 0) 
   })),
   
-  handleRejection: () => set((state) => ({
-    energy: Math.max(0, state.energy - 10)
-  })),
+  handleRejection: () => set((state) => {
+    const newRejectionCount = state.rejectionCount + 1;
+    const shouldReduceEmotional = newRejectionCount % 2 === 0; // Only decrease emotional state on even rejections
+    
+    return {
+      rejectionCount: newRejectionCount,
+      emotionalState: shouldReduceEmotional 
+        ? Math.max(state.emotionalState - 10, 0)
+        : state.emotionalState,
+      energy: Math.max(0, state.energy - 10)
+    };
+  }),
   
   getFlirtSuccessChance: (state) => {
     const baseChance = 0.2; // Reduced base chance

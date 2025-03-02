@@ -96,7 +96,7 @@ function Door({ position, rotation }) {
       const distanceToDoor = Math.sqrt(dx * dx + dz * dz);
       
       // Show prompt when within interaction distance (2 units) regardless of angle
-      setShowPrompt(distanceToDoor < 2);
+      setShowPrompt(distanceToDoor < 2 && isDoorOpen);
       
       // Animate door rotation
       const targetRotation = isDoorOpen ? Math.PI / 2 : 0;
@@ -191,7 +191,7 @@ function Door({ position, rotation }) {
               onMouseOver={(e) => e.target.style.transform = 'scale(1.05)'}
               onMouseOut={(e) => e.target.style.transform = 'scale(1)'}
             >
-              {isDoorOpen ? 'Close Door 🚪' : 'Open Door 🚪'}
+              {'Open Door 🚪'}
             </button>
           </div>
         </Html>

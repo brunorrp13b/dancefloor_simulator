@@ -22,9 +22,10 @@ export default function UI() {
   
   // Decrease emotional state over time
   useEffect(() => {
+    if (isDancing) return;
     const interval = setInterval(() => {
       decreaseEmotionalState();
-    }, 1000);
+    }, 2000);
     
     return () => clearInterval(interval);
   }, [decreaseEmotionalState]);
@@ -82,7 +83,7 @@ export default function UI() {
         <div className="score-display">
           <div className="score-section">
             <div className="score-label">DANCE SCORE</div>
-            <div className="score-value">{danceScore}</div>
+            <div className="score-value">{Math.ceil(danceScore)}</div>
           </div>
           <div className="score-section">
             <div className="score-label">KISSES</div>
