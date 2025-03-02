@@ -13,7 +13,6 @@ export default function UI() {
     danceScore,
     emotionalState,
     confidence,
-    decreaseEmotionalState,
     kissCount,
     currentAchievement,
     showKissAnimation,
@@ -27,16 +26,6 @@ export default function UI() {
     }
   }, [currentAchievement]);
   
-  // Decrease emotional state over time
-  useEffect(() => {
-    if (isDancing) return;
-    const interval = setInterval(() => {
-      decreaseEmotionalState();
-    }, 2000);
-    
-    return () => clearInterval(interval);
-  }, [decreaseEmotionalState]);
-
   // Hide kiss animation after delay
   useEffect(() => {
     if (showKissAnimation) {
@@ -74,16 +63,6 @@ export default function UI() {
               <div
                 className="energy-fill"
                 style={{ width: `${energy}%` }}
-              />
-            </div>
-          </div>
-          
-          <div className="emotional-bar">
-            <div className="emotional-label">EMOTIONAL STATE</div>
-            <div className="emotional-container">
-              <div
-                className="emotional-fill"
-                style={{ width: `${emotionalState}%` }}
               />
             </div>
           </div>

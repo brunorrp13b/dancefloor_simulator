@@ -39,10 +39,10 @@ const WALLS = [
 
 // Add new constants for game balance
 const DANCE_MOVE_STATS = {
-  [DANCE_MOVES.BASIC]: { energyCost: 0.5, scoreGain: 0.33, emotionalGain: 1.67 },
-  [DANCE_MOVES.SPIN]: { energyCost: 0.75, scoreGain: 0.5, emotionalGain: 2, minConfidence: 30 },
-  [DANCE_MOVES.WAVE]: { energyCost: 1, scoreGain: 0.67, emotionalGain: 2.33, minConfidence: 50 },
-  [DANCE_MOVES.JUMP]: { energyCost: 1.5, scoreGain: 0.83, emotionalGain: 2.67, minConfidence: 70 }
+  [DANCE_MOVES.BASIC]: { energyCost: 0.5, scoreGain: 0.33, confidenceGain: 2 },
+  [DANCE_MOVES.SPIN]: { energyCost: 0.75, scoreGain: 0.5, confidenceGain: 3, minConfidence: 30 },
+  [DANCE_MOVES.WAVE]: { energyCost: 1, scoreGain: 0.67, confidenceGain: 4, minConfidence: 50 },
+  [DANCE_MOVES.JUMP]: { energyCost: 1.5, scoreGain: 0.83, confidenceGain: 5, minConfidence: 70 }
 };
 
 const KISS_ACHIEVEMENTS = {
@@ -70,7 +70,6 @@ const useGameStore = create((set, get) => ({
   energy: 100,
   currentDanceMove: DANCE_MOVES.BASIC,
   danceScore: 0,
-  emotionalState: 100,
   confidence: 10,
   lastKissTime: 0,
   lastActivityTime: Date.now(),
@@ -94,7 +93,7 @@ const useGameStore = create((set, get) => ({
   showKissAnimation: false,
   kissPosition: [0, 0],
   currentAchievement: null,
-  npcCooldowns: {}, // Track cooldown timers for each NPC
+  npcCooldowns: {},
   energyRegenInterval: null,
   
   buyAlcohol: () => {
@@ -149,14 +148,13 @@ const useGameStore = create((set, get) => ({
   
   decreaseEnergy: () => set((state) => {
     const timeSinceActivity = (Date.now() - Math.max(state.lastActivityTime, state.lastKissTime)) / 1000;
-    const shouldDepleteEmotional = timeSinceActivity > 5;
     const moveStats = DANCE_MOVE_STATS[state.currentDanceMove];
 
     return {
       energy: Math.max(state.energy - (state.isDancing ? moveStats.energyCost : 0), 0),
-      emotionalState: state.isDancing 
-        ? Math.min(state.emotionalState + moveStats.emotionalGain, 100)
-        : state.emotionalState
+      confidence: state.isDancing 
+        ? Math.min(state.confidence + moveStats.confidenceGain, 100)
+        : Math.max(state.confidence - (timeSinceActivity > 5 ? 0.5 : 0), 0) // Slowly lose confidence when inactive
     };
   }),
   increaseEnergy: () => set((state) => ({ 
@@ -180,8 +178,7 @@ const useGameStore = create((set, get) => ({
       lastDanceMove: state.currentDanceMove,
       lastMoveChangeTime: now,
       confidence: Math.min(state.confidence + 5, 100), // Confidence boost for changing moves
-      emotionalState: Math.min(state.emotionalState + 10, 100), // Emotional boost for changing moves
-      danceScore: state.danceScore + moveStats.scoreGain + (timeSinceLastMove < 3 ? 5 : 0) // Base score for new move + quick change bonus
+      danceScore: state.danceScore + moveStats.scoreGain + (timeSinceLastMove < 3 ? 5 : 0)
     }));
     return true;
   },
@@ -194,7 +191,7 @@ const useGameStore = create((set, get) => ({
   })),
   
   increaseConfidence: () => set((state) => ({ 
-    confidence: Math.min(state.confidence + 10, 100) // Reduced mirror boost
+    confidence: Math.min(state.confidence + 15, 100) // Increased mirror boost to compensate for combined stat
   })),
   decreaseConfidence: () => set((state) => ({ 
     confidence: Math.max(state.confidence - 25, 0) 
@@ -204,22 +201,22 @@ const useGameStore = create((set, get) => ({
     // Trigger kiss animation when emotional state increases
     state.triggerKissAnimation();
     return { 
-      emotionalState: Math.min(state.emotionalState + 20, 100) 
+      confidence: Math.min(state.confidence + 20, 100) 
     };
   }),
   decreaseEmotionalState: () => set((state) => ({ 
-    emotionalState: Math.max(state.emotionalState - 10, 0) 
+    confidence: Math.max(state.confidence - 10, 0) 
   })),
   
   handleRejection: () => set((state) => {
     const newRejectionCount = state.rejectionCount + 1;
-    const shouldReduceEmotional = newRejectionCount % 2 === 0; // Only decrease emotional state on even rejections
+    const shouldReduceConfidence = newRejectionCount % 2 === 0; // Only decrease confidence on even rejections
     
     return {
       rejectionCount: newRejectionCount,
-      emotionalState: shouldReduceEmotional 
-        ? Math.max(state.emotionalState - 10, 0)
-        : state.emotionalState,
+      confidence: shouldReduceConfidence 
+        ? Math.max(state.confidence - 10, 0)
+        : state.confidence,
       energy: Math.max(0, state.energy - 10)
     };
   }),
@@ -231,29 +228,25 @@ const useGameStore = create((set, get) => ({
     // Dancing bonus - significant to encourage dancing
     const danceBonus = state.isDancing ? 0.20 : 0;
     
-    // Emotional state has moderate impact - recoverable resource
-    const emotionalBonus = state.emotionalState * 0.002; // Up to 20% at max emotional
-    
-    // Confidence is a key factor - main progression metric
-    const confidenceBonus = state.confidence * 0.0015; // Up to 15% at max confidence
+    // Confidence is now the main factor - increased impact
+    const confidenceBonus = state.confidence * 0.004; // Up to 40% at max confidence
     
     // Combo system is more rewarding but harder to maintain
     const comboBonus = Math.min(state.flirtCombo * 0.02, 0.10); // 2% per combo, up to 10% max
     
-    // Message bonus - reward players who write messages (optimized for 20 char max)
-    const messageBonus = message ? Math.min(0.15 + (message.length * 0.005), 0.25) : 0; // Up to 25% (15% base + 0.5% per char, max at 20 chars)
+    // Message bonus - reward players who write messages
+    const messageBonus = message ? Math.min(0.15 + (message.length * 0.005), 0.25) : 0;
     
-    // Quick flirt penalty - make it slightly harder than writing messages
-    const quickFlirtPenalty = !message ? 0.10 : 0; // -10% for quick flirts
+    // Quick flirt penalty
+    const quickFlirtPenalty = !message ? 0.10 : 0;
     
-    // Luck factor for excitement - can turn the tide
-    const luckFactor = Math.random() * 0.15; // Random luck up to 15%
+    // Luck factor for excitement
+    const luckFactor = Math.random() * 0.15;
     
     // Cap total chance at 70% for sustained challenge
     return Math.min(0.70, 
       baseChance + 
       danceBonus + 
-      emotionalBonus + 
       confidenceBonus + 
       comboBonus + 
       messageBonus - 
@@ -321,10 +314,9 @@ const useGameStore = create((set, get) => ({
     set({
       energy: 100,
       confidence: 100,
-      emotionalState: 100,
       isUnderAlcoholEffect: true,
       alcoholEffectStart: Date.now(),
-      lastActivityTime: Date.now() // Reset activity timer when drinking
+      lastActivityTime: Date.now()
     });
 
     const timer = setTimeout(() => {
@@ -333,7 +325,7 @@ const useGameStore = create((set, get) => ({
         alcoholEffectTimer: null,
         alcoholEffectStart: null
       }));
-    }, 10000); // 10 seconds
+    }, 10000);
 
     set({ alcoholEffectTimer: timer });
   },
@@ -435,7 +427,6 @@ const useGameStore = create((set, get) => ({
         },
         rejectionCount: state.rejectionCount + 1,
         confidence: Math.max(state.confidence - 30, 0),
-        emotionalState: Math.max(state.emotionalState - 25, 0),
         flirtCombo: 0
       }));
     } else if (isCritical) {
@@ -445,7 +436,6 @@ const useGameStore = create((set, get) => ({
         
       const newKissCount = state.kissCount + 1;
       
-      // Check for new achievements
       let newAchievement = null;
       for (const [level, data] of Object.entries(KISS_ACHIEVEMENTS)) {
         if (newKissCount === data.count) {
@@ -458,8 +448,7 @@ const useGameStore = create((set, get) => ({
         lastActivityTime: Date.now(),
         lastKissTime: Date.now(),
         flirtCombo: state.flirtCombo + 1,
-        confidence: Math.min(state.confidence + 10, 100),
-        emotionalState: Math.min(state.emotionalState + 15, 100),
+        confidence: Math.min(state.confidence + 20, 100),
         kissCount: newKissCount,
         showKissAnimation: true,
         currentAchievement: newAchievement || state.currentAchievement
@@ -473,8 +462,7 @@ const useGameStore = create((set, get) => ({
         lastActivityTime: Date.now(),
         lastKissTime: Date.now(),
         flirtCombo: state.flirtCombo + 1,
-        confidence: Math.min(state.confidence + 5, 100),
-        emotionalState: Math.min(state.emotionalState + 10, 100),
+        confidence: Math.min(state.confidence + 10, 100),
         kissCount: state.kissCount + 1,
         showKissAnimation: true
       }));
@@ -485,8 +473,7 @@ const useGameStore = create((set, get) => ({
         
       set((state) => ({
         rejectionCount: state.rejectionCount + 1,
-        confidence: Math.max(state.confidence - 10, 0),
-        emotionalState: Math.max(state.emotionalState - 5, 0),
+        confidence: Math.max(state.confidence - 15, 0),
         flirtCombo: 0
       }));
     }
@@ -504,12 +491,11 @@ const useGameStore = create((set, get) => ({
   updateAlcoholEffect: () => {
     const state = get();
     if (state.isUnderAlcoholEffect && state.alcoholEffectStart) {
-      const elapsedTime = (Date.now() - state.alcoholEffectStart) / 1000; // Convert to seconds
-      if (elapsedTime > 10) { // After 10 seconds
+      const elapsedTime = (Date.now() - state.alcoholEffectStart) / 1000;
+      if (elapsedTime > 10) {
         set((state) => ({
           energy: Math.max(state.energy - 0.5, 0),
-          confidence: Math.max(state.confidence - 0.3, 0),
-          emotionalState: Math.max(state.emotionalState - 0.4, 0)
+          confidence: Math.max(state.confidence - 0.5, 0)
         }));
       }
     }
