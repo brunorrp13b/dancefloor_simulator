@@ -195,7 +195,7 @@ function Door({ position, rotation }) {
               fontSize: '16px',
               color: '#ff61df'
             }}>
-              {isDoorOpen ? 'Close the bathroom door?' : 'Open the bathroom door?'}
+              {'Open the bathroom door?'}
             </div>
             <button
               onClick={toggleDoor}
